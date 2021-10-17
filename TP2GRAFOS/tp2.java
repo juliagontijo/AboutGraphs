@@ -9,72 +9,46 @@ import java.util.*;
 
 public class tp2 {
     public static Scanner in = new Scanner(System.in);
-    private static int quantNos; //number of nodes
-    private static int quantArestas; //number of vertex
+    private static int numNodes; //number of nodes
+    private static int numVertex; //number of vertex
     private static LinkedList<Integer> no; //list of nodes in the graph
-    private static LinkedList<Aresta> arestas; //list of vertexes in the graph
+    private static LinkedList<Aresta> vertex; //list of vertexes in the graph
 
     //Permutation helpers
     static LinkedList<LinkedList<Integer>> ans;
 
     public static void main(String[] args){
         String entry = in.nextLine();
+        //manipulate entry and define nodes and vertices from it
         readEntry(entry);
 
         //Matriz de Adjacência
         sortVertexA();
         System.out.println("\n-- Matriz de Adjacência --\n");
-        MatrixAdjacency matrixA = new MatrixAdjacency(quantNos);
-        matrixA.fillMatrixA(arestas, quantNos);
-        matrixA.printMatrixA(quantNos);
+        MatrixAdjacency matrixA = new MatrixAdjacency(numNodes);
+        matrixA.fillMatrixA(vertex, numNodes);
+        matrixA.printMatrixA(numNodes);
 
 
-        //CONTA CICLOS POR PERMUTAÇÃO
+        //COUNT CYCLES FROM PERMUTATION
         System.out.println("\nQuantidade de ciclos por permutação: "+countCyclesPermutation(matrixA));
 
 
-        //CONTA CICLOS POR CAMINHAMENTO
+        //COUNT CYCLES FROM DFS
         System.out.println("Quantidade de ciclos por caminhamento: "+findCyclesDFS());
-
-    }
-
-    public static int countCyclesPermutation(MatrixAdjacency matrixA){
-        int quantCiclos=0;
-
-        //combinação dos nós de 3 em 3 (pois é o mínimo para acontecer um ciclo em um grafo)
-        //faz o 3 antes, separado do resto, pois não é necessário conferir permutação de 3 nós (se a combonação for ciclo, sua permutação será sempre o mesmo ciclo)
-        ans = combine(no.size(), 3);
-        for(int i=0; i<ans.size(); i++)
-            //verificar se cada combinação faz ciclo
-            if(isCycled(ans.get(i), matrixA)) //SE SIM: contabilizar
-                quantCiclos++;
-
-        //combinação dos nós de k em k (a partir do 4)
-        for(int k=4; k<=no.size(); k++){
-            //pega as combinações existentes de k em k
-            ans = combine(no.size(), k);
-            for(int i=0; i<ans.size(); i++){
-                //todas as permutações exisntentes com os números da combinação em questão
-                LinkedList<LinkedList<Integer>> permutations = getPermutations(ans.get(i), 0, k-1, matrixA);
-                //System.out.println(permutations);
-                quantCiclos += getQuantCyclesThroughPermutationAnalysis(matrixA, permutations);
-            }
-        }
-
-        return quantCiclos;
 
     }
 
     public static void readEntry(String entry){
         entry = replace(entry);
-        quantArestas = getQuantArestas(entry);
-        defineNos(entry);
-        defineArestas(entry);
+        defineNodes(entry);
+        defineVertex(entry);
         sortVertexA();
-        printArestas();
-        printNos();
+        printVertex();
+        printNodes();
     }
 
+    //retrive anything unecessary from string entrance
     public static String replace(String entry){
         entry = entry.replace("{", "");
         entry = entry.replace("(", "");
@@ -84,12 +58,14 @@ public class tp2 {
         return entry;
     }
 
-    public static int getQuantArestas(String entry){
-        String arrayArestasSeparadas[] = entry.split(";");
-        return arrayArestasSeparadas.length;
+    public static int getnumVertex(String entry){
+        //store each vertex (separated in the string with ;) in a vector
+        String seperatedVertex[] = entry.split(";");
+        return seperatedVertex.length;
     }
 
-    public static void defineNos(String entry){
+    //store all nodes in "no" list and define its amount
+    public static void defineNodes(String entry){
         no = new LinkedList<Integer>();
         entry = entry.replaceAll(";", ",");
         String[] nos = entry.split(",");
@@ -98,68 +74,99 @@ public class tp2 {
                     no.add(Integer.parseInt(nos[i]));
         }
         Collections.sort(no);
-        quantNos = no.size();
+        numNodes = no.size();
     }
 
-    public static void defineArestas(String entry){
-        arestas = new LinkedList<Aresta>();
+    //store all vertex in "vertex" list and define its amount
+    public static void defineVertex(String entry){
+        vertex = new LinkedList<Aresta>();
+        numVertex = getnumVertex(entry);
         entry = entry.replaceAll(";", ",");
         String[] nos = entry.split(",");
         for(int i=0; i<nos.length; i+=2){
-                arestas.add(new Aresta(Integer.parseInt(nos[i]), Integer.parseInt(nos[i+1])));
+                vertex.add(new Aresta(Integer.parseInt(nos[i]), Integer.parseInt(nos[i+1])));
         }
     }
 
-    public static void printArestas(){
+    public static void printVertex(){
         System.out.println("\nPRINT ARESTAS\n");
-        for(int i=0; i<arestas.size(); i++){
-             System.out.println("("+arestas.get(i).getA()+","+arestas.get(i).getB()+")");
+        for(int i=0; i<vertex.size(); i++){
+             System.out.println("("+vertex.get(i).getA()+","+vertex.get(i).getB()+")");
         }
     }
 
-    public static void printNos(){
+    public static void printNodes(){
         System.out.println("\nPRINT NOS\n");
         for(int i=0; i<no.size(); i++){
             System.out.println("NO [" + i + "] = ("+no.get(i)+")");
         }
     }
 
-    //Ordenação
+    //Sort vertex from it's first node (atribute A in Arestas class)
     public static void sortVertexA(){
-        for (int i = 0; i < (arestas.size() - 1); i++) {
-            int menor = i;
-            for (int j = (i + 1); j < arestas.size(); j++){
-                int comp = ((arestas.get(menor).getA()) > (arestas.get(j).getA())) ? 1:0;
+        for (int i = 0; i < (vertex.size() - 1); i++) {
+            int min = i;
+            for (int j = (i + 1); j < vertex.size(); j++){
+                int comp = ((vertex.get(min).getA()) > (vertex.get(j).getA())) ? 1:0;
                if (comp>0){
-                  menor = j;
+                  min = j;
                }
             }
-            swap(menor, i);
+            swap(min, i);
          }
     }
 
+    //Sort vertex from it's second node (atribute B in Arestas class)
     public static void sortVertexB(){
-        for (int i = 0; i < (arestas.size() - 1); i++) {
-            int menor = i;
-            for (int j = (i + 1); j < arestas.size(); j++){
-                int comp = ((arestas.get(menor).getB()) > (arestas.get(j).getB())) ? 1:0;
+        for (int i = 0; i < (vertex.size() - 1); i++) {
+            int min = i;
+            for (int j = (i + 1); j < vertex.size(); j++){
+                int comp = ((vertex.get(min).getB()) > (vertex.get(j).getB())) ? 1:0;
                if (comp>0){
-                  menor = j;
+                  min = j;
                }
             }
-            swap(menor, i);
+            swap(min, i);
          }
     }
   
     public static void swap(int i, int j) {
-        Aresta temp = new Aresta(arestas.get(i).getA(),arestas.get(i).getB());
-        arestas.get(i).setA(arestas.get(j).getA());
-        arestas.get(i).setB(arestas.get(j).getB());
-        arestas.get(j).setA(temp.getA());
-        arestas.get(j).setB(temp.getB());
+        Aresta temp = new Aresta(vertex.get(i).getA(),vertex.get(i).getB());
+        vertex.get(i).setA(vertex.get(j).getA());
+        vertex.get(i).setB(vertex.get(j).getB());
+        vertex.get(j).setA(temp.getA());
+        vertex.get(j).setB(temp.getB());
     }
 
-    //Combinação
+    //returns all the cycles counted in the graph
+    public static int countCyclesPermutation(MatrixAdjacency matrixA){
+        int numCycles=0;
+
+        //combination of all nodes 3 at a time (because 3 is the minimum amount of nodes so a cycle can exist)
+        ans = combine(no.size(), 3);
+        //OBS: 
+        //do 3 seperated from the rest of nodes combinations because with only 3 we don't need to do permutation 
+        //(if it is a cycle, all it's permutations correspond to the same cycle)
+
+        //check if each combination 3 at a time is cycled
+        for(int i=0; i<ans.size(); i++)
+            if(isCycled(ans.get(i), matrixA))
+                numCycles++;
+
+        //combination of all nodes k at a time (from 4 to the amount of nodes)
+        for(int k=4; k<=no.size(); k++){
+            ans = combine(no.size(), k);
+            for(int i=0; i<ans.size(); i++){
+                //all the permutations from each combination
+                LinkedList<LinkedList<Integer>> permutations = getPermutations(ans.get(i), 0, k-1, matrixA);
+                //given all the permutations of that combination of nodes, check which ones are real cycles, and which cyles are actualy different from each other
+                numCycles += getQuantCyclesThroughPermutationAnalysis(matrixA, permutations);
+            }
+        }
+        return numCycles;
+    }
+
+    //Combination of all n nodes, k at a time
     public static LinkedList<LinkedList<Integer>> combine(int n, int k){
         LinkedList<LinkedList<Integer>> xx = new LinkedList();
         if(k==0){
@@ -182,7 +189,7 @@ public class tp2 {
         }
     }
     
-    //Confere se uma lista de nós forma um ciclo na ordem em que aparece
+    //Check if a sequence of nodes forms a cycle in the graph (analyzing the adjacency matrix)
     public static boolean isCycled(LinkedList<Integer> current, MatrixAdjacency matrixA){
         for(int i=0; i<current.size()-1; i++){
             if(matrixA.get((current.get(i)-1),(current.get(i+1)-1)) == 0 && matrixA.get((current.get(i+1)-1),(current.get(i)-1)) == 0)
@@ -194,7 +201,7 @@ public class tp2 {
         return true;
     }
 
-    //Permutação
+    //Permutation -> returns a list of lists of all permutations given a combination of nodes
     public static LinkedList<LinkedList<Integer>> getPermutations(LinkedList<Integer> current, int i, int j, MatrixAdjacency matrixA){
         LinkedList<LinkedList<Integer>> permutations = new LinkedList();
         permute(current, i, j, matrixA, permutations);
@@ -222,14 +229,20 @@ public class tp2 {
         return temp;
     }
 
+    //Returns the amount of valid and diferent cycles are in the generated permutations
     public static int getQuantCyclesThroughPermutationAnalysis(MatrixAdjacency matrixA, LinkedList<LinkedList<Integer>> permutations){
+        //stores repeated permutations that may appear, that we need to discard
+        //such as: 1234, 2341, 3412 and 4123, that are all cyclic but are all the same cycle
         LinkedList<LinkedList<Integer>> repeatedPermutationCycles = new LinkedList<>();
+        //stores the valid diferent from each other cycles, once it's a cycle and it's not in the "repeatedPermutationCycles" list
         LinkedList<LinkedList<Integer>> validPermutationCycles = new LinkedList<>();
+        //count the valid different cycles
         int cont=0;
 
         for(LinkedList<Integer> p : permutations){
             if(isCycled(p, matrixA) && (!repeatedPermutationCycles.contains(p))){
                 validPermutationCycles.add(p);
+                //add p's repeated cycles so we can avoid adding them to the "validPermutationCycles"
                 repeatedPermutationCycles = addPsPepeatedCycles(p,repeatedPermutationCycles);
                 cont++;
             }
@@ -271,8 +284,9 @@ public class tp2 {
         return repeatedPermut;
     }
     
+    //Count all cycles in a graph through DFS
     public static int findCyclesDFS(){
-        findCycle p = new findCycle(arestas);
+        findCycle p = new findCycle(vertex);
         return p.start();
     }
 }
